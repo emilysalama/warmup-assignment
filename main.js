@@ -1,6 +1,120 @@
 const fs = require("fs");
 
 // ============================================================
+// HELPER FUNCTIONS (for time conversion)
+// ============================================================
+
+/**
+ * Converts time string (hh:mm:ss am/pm) to total seconds since midnight
+ * @param {string} timeStr - Time in format "hh:mm:ss am" or "hh:mm:ss pm"
+ * @returns {number} Total seconds since midnight
+ */
+function timeToSeconds(timeStr) {
+    // Trim any extra spaces
+    timeStr = timeStr.trim();
+    
+    // Split into time and period (am/pm)
+    const parts = timeStr.split(' ');
+    const timePart = parts[0]; // "6:01:20"
+    const period = parts[1]?.toLowerCase(); // "am" or "pm"
+    
+    // Split time into hours, minutes, seconds
+    const timeComponents = timePart.split(':');
+    let hours = parseInt(timeComponents[0], 10);
+    const minutes = parseInt(timeComponents[1], 10);
+    const seconds = parseInt(timeComponents[2], 10);
+    
+    // Convert to 24-hour format
+    if (period === 'pm' && hours !== 12) {
+        hours += 12;
+    } else if (period === 'am' && hours === 12) {
+        hours = 0;
+    }
+    
+    return (hours * 3600) + (minutes * 60) + seconds;
+}
+
+/**
+ * Converts duration string (h:mm:ss or hhh:mm:ss) to total seconds
+ * @param {string} durationStr - Time in format "h:mm:ss" or "hhh:mm:ss"
+ * @returns {number} Total seconds
+ */
+function durationToSeconds(durationStr) {
+    durationStr = durationStr.trim();
+    const parts = durationStr.split(':');
+    const hours = parseInt(parts[0], 10);
+    const minutes = parseInt(parts[1], 10);
+    const seconds = parseInt(parts[2], 10);
+    
+    return (hours * 3600) + (minutes * 60) + seconds;
+}
+
+/**
+ * Converts seconds to time format h:mm:ss or hhh:mm:ss
+ * @param {number} totalSeconds - Total seconds
+ * @param {boolean} tripleDigitHours - If true, format as hhh:mm:ss (for totals)
+ * @returns {string} Formatted time string
+ */
+function secondsToTime(totalSeconds, tripleDigitHours = false) {
+    // Handle negative values (shouldn't happen but just in case)
+    totalSeconds = Math.max(0, totalSeconds);
+    
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    // Format with leading zeros for minutes and seconds
+    const minutesStr = minutes.toString().padStart(2, '0');
+    const secondsStr = seconds.toString().padStart(2, '0');
+    
+    if (tripleDigitHours) {
+        // For hhh:mm:ss format (3-digit hours with leading zeros if needed)
+        const hoursStr = hours.toString().padStart(3, '0');
+        return `${hoursStr}:${minutesStr}:${secondsStr}`;
+    } else {
+        // For h:mm:ss format (no leading zero for hours)
+        return `${hours}:${minutesStr}:${secondsStr}`;
+    }
+}
+
+/**
+ * Parses a CSV line into an object using headers
+ * @param {string} line - CSV line
+ * @param {string[]} headers - Column headers
+ * @returns {Object} Parsed object
+ */
+function parseCSVLine(line, headers) {
+    const values = line.split(',');
+    const obj = {};
+    headers.forEach((header, index) => {
+        // Trim whitespace and handle boolean conversion
+        let value = values[index] ? values[index].trim() : '';
+        if (header === 'metQuota' || header === 'hasBonus') {
+            obj[header] = value === 'true';
+        } else {
+            obj[header] = value;
+        }
+    });
+    return obj;
+}
+
+/**
+ * Converts object to CSV line
+ * @param {Object} obj - Object to convert
+ * @param {string[]} headers - Column headers in order
+ * @returns {string} CSV line
+ */
+function objectToCSVLine(obj, headers) {
+    return headers.map(header => {
+        let value = obj[header];
+        // Convert booleans to strings
+        if (typeof value === 'boolean') {
+            return value.toString();
+        }
+        return value;
+    }).join(',');
+}
+// ============================================================
 // Function 1: getShiftDuration(startTime, endTime)
 // startTime: (typeof string) formatted as hh:mm:ss am or hh:mm:ss pm
 // endTime: (typeof string) formatted as hh:mm:ss am or hh:mm:ss pm
