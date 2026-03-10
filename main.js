@@ -186,12 +186,34 @@ function getActiveTime(shiftDuration, idleTime) {
 
 // ============================================================
 // Function 4: metQuota(date, activeTime)
+// Checks if driver met daily quota (8h24m normal, 6h during Eid)
 // date: (typeof string) formatted as yyyy-mm-dd
 // activeTime: (typeof string) formatted as h:mm:ss
 // Returns: boolean
 // ============================================================
 function metQuota(date, activeTime) {
-    // TODO: Implement this function
+     // Edge cases:
+    // - Invalid date format
+    // - Date exactly on boundaries
+    
+    // Parse the date
+    const dateObj = new Date(date);
+    
+    // Define Eid period (April 10-30, 2025)
+    const eidStart = new Date('2025-04-10');
+    const eidEnd = new Date('2025-04-30');
+    
+    // Check if date is within Eid period
+    const isEidPeriod = dateObj >= eidStart && dateObj <= eidEnd;
+    
+    // Set quota based on period
+    const quotaSeconds = isEidPeriod ? 6 * 3600 : (8 * 3600) + (24 * 60);
+    
+    // Convert activeTime to seconds
+    const activeSeconds = durationToSeconds(activeTime);
+    
+    // Return true if active time meets or exceeds quota
+    return activeSeconds >= quotaSeconds;
 }
 
 // ============================================================
