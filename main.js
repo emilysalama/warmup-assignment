@@ -560,16 +560,18 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
         }
 
         const rateLines = rateContent.split('\n').filter(line => line.trim() !== '');
-        if (rateLines.length <= 1) return "000:00:00";
+        if (rateLines.length <= 0) return "000:00:00";
 
-        // ✅ FIX: Parse header row to find column indices dynamically
-        const rateHeaders = rateLines[0].split(',').map(h => h.trim());
-        const dayOffIdx = rateHeaders.indexOf('dayOff');
+        // FIX: Parse header row to find column indices dynamically
+        //const rateHeaders = rateLines[0].split(',').map(h => h.trim());
+        //const dayOffIdx = rateHeaders.indexOf('dayOff');
 
-        if (dayOffIdx === -1) return "000:00:00";
+        //if (dayOffIdx === -1) return "000:00:00";
+
+        const dayOffIdx = 1; // driverID,dayOff,basePay,tier
 
         let driverDayOff = null;
-        for (let i = 1; i < rateLines.length; i++) {
+        for (let i = 0; i < rateLines.length; i++) {
             const line = rateLines[i].trim();
             if (!line) continue;
             const values = line.split(',');
@@ -626,7 +628,7 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
         totalRequiredSeconds -= bonusCount * 2 * 3600;
         totalRequiredSeconds = Math.max(0, totalRequiredSeconds);
 
-        // ✅ FIX: plain secondsToTime, no triple-digit padding
+        // FIX: plain secondsToTime, no triple-digit padding
         return secondsToTime(totalRequiredSeconds);
 
     } catch (error) {
@@ -660,12 +662,15 @@ function getNetPay(driverID, actualHours, requiredHours, rateFile) {
         }
 
         const rateLines = rateContent.split('\n').filter(line => line.trim() !== '');
-        if (rateLines.length <= 1) return 0;
+        if (rateLines.length <= 0) return 0;
 
-        // ✅ FIX: Parse header row to find basePay and tier indices dynamically
-        const rateHeaders = rateLines[0].split(',').map(h => h.trim());
-        const basePayIdx = rateHeaders.indexOf('basePay');
-        const tierIdx = rateHeaders.indexOf('tier');
+        // FIX: Parse header row to find basePay and tier indices dynamically
+        //const rateHeaders = rateLines[0].split(',').map(h => h.trim());
+        //const basePayIdx = rateHeaders.indexOf('basePay');
+        //const tierIdx = rateHeaders.indexOf('tier');
+
+        const basePayIdx = 2;
+        const tierIdx = 3;
 
         if (basePayIdx === -1 || tierIdx === -1) return 0;
 
@@ -673,7 +678,7 @@ function getNetPay(driverID, actualHours, requiredHours, rateFile) {
         let driverTier = 0;
         let driverFound = false;
 
-        for (let i = 1; i < rateLines.length; i++) {
+        for (let i = 0; i < rateLines.length; i++) {
             const line = rateLines[i].trim();
             if (!line) continue;
             const values = line.split(',');
@@ -709,7 +714,7 @@ function getNetPay(driverID, actualHours, requiredHours, rateFile) {
 
         const netPay = driverBasePay - (billableHours * deductionRatePerHour);
 
-        
+
         return netPay;
 
     } catch (error) {
