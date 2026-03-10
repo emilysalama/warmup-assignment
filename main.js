@@ -371,13 +371,60 @@ function setBonus(textFile, driverID, date, newValue) {
 
 // ============================================================
 // Function 7: countBonusPerMonth(textFile, driverID, month)
+// Counts bonus records for a driver in a specific month
 // textFile: (typeof string) path to shifts text file
 // driverID: (typeof string)
 // month: (typeof string) formatted as mm or m
 // Returns: number (-1 if driverID not found)
 // ============================================================
 function countBonusPerMonth(textFile, driverID, month) {
-    // TODO: Implement this function
+    // Edge cases:
+    // - Month can be "4" or "04"
+    // - Driver not found (return -1)
+    // - No records for that month (return 0)
+    
+    try {
+        // Read the file
+        let content = fs.readFileSync(textFile, 'utf8');
+        const lines = content.trim().split('\n');
+        
+        if (lines.length <= 1) {
+            // Only headers or empty file
+            return -1; // Driver not found
+        }
+        
+        // Get headers
+        const headers = lines[0].split(',');
+        
+        // Normalize month input (pad with leading zero if needed)
+        const monthStr = month.toString().padStart(2, '0');
+        
+        let driverFound = false;
+        let bonusCount = 0;
+        
+        for (let i = 1; i < lines.length; i++) {
+            if (lines[i].trim() === '') continue;
+            
+            const record = parseCSVLine(lines[i], headers);
+            
+            if (record.driverID === driverID) {
+                driverFound = true;
+                
+                // Extract month from date (yyyy-mm-dd)
+                const recordMonth = record.date.substring(5, 7);
+                
+                if (recordMonth === monthStr && record.hasBonus === true) {
+                    bonusCount++;
+                }
+            }
+        }
+        
+        return driverFound ? bonusCount : -1;
+        
+    } catch (error) {
+        console.error("Error in countBonusPerMonth:", error);
+        return -1;
+    }
 }
 
 // ============================================================
