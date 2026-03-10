@@ -580,7 +580,7 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
             const eidStart = new Date('2025-04-10');
             const eidEnd = new Date('2025-04-30');
             const isEid = dateObj >= eidStart && dateObj <= eidEnd;
-                      
+
             if (isEid) {
                 totalRequiredSeconds += 6 * 3600;
             } else {
@@ -601,7 +601,6 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
     }
 }
     
-    
 // ============================================================
 // Function 10: getNetPay(driverID, actualHours, requiredHours, rateFile)
 // Calculates net pay after deductions for missing hours
@@ -615,7 +614,7 @@ function getNetPay(driverID, actualHours, requiredHours, rateFile) {
     // Edge cases:
     // - Driver not found in rateFile (return 0)
     // - Actual hours >= required hours (no deduction)
-    
+
     try {
         // Read rateFile to get driver's tier and basePay
         const rateContent = fs.readFileSync(rateFile, 'utf8');
@@ -623,30 +622,28 @@ function getNetPay(driverID, actualHours, requiredHours, rateFile) {
         
         if (rateLines.length <= 1) {
             return 0;
-        }
-        
-        const rateHeaders = rateLines[0].split(',');
-        
+          }
+    
         // Find driver in rate file
         let driverTier = null;
         let driverBasePay = null;
         
         for (let i = 1; i < rateLines.length; i++) {
-            if (rateLines[i].trim() === '') continue;
+            if (!rateLines[i] || rateLines[i].trim() === '') continue;
             
             const values = rateLines[i].split(',');
             if (values[0].trim() === driverID) {
-                driverTier = parseInt(values[3].trim(), 10); // tier at index 3
-                driverBasePay = parseInt(values[2].trim(), 10); // basePay at index 2
+                driverTier = parseInt(values[3].trim(), 10);
+                driverBasePay = parseInt(values[2].trim(), 10);
                 break;
             }
         }
         
         if (!driverTier || !driverBasePay) {
-            return 0; // Driver not found
+            return 0;
         }
         
-        // Convert hours to seconds for comparison
+        // Convert hours to seconds
         const actualSeconds = durationToSeconds(actualHours);
         const requiredSeconds = durationToSeconds(requiredHours);
         
@@ -658,17 +655,17 @@ function getNetPay(driverID, actualHours, requiredHours, rateFile) {
         // Calculate missing seconds
         let missingSeconds = requiredSeconds - actualSeconds;
         
-        // Apply tier allowance
+        // Tier allowances
         const allowanceHours = {
-            1: 50,  // Senior
-            2: 20,  // Regular
-            3: 10,  // Junior
-            4: 3    // Trainee
+            1: 50,
+            2: 20,
+            3: 10,
+            4: 3
         };
         
         const allowanceSeconds = allowanceHours[driverTier] * 3600;
         
-        // Subtract allowance from missing seconds
+        // Calculate billable seconds after allowance
         let billableSeconds = Math.max(0, missingSeconds - allowanceSeconds);
         
         // Convert to full hours only (floor)
@@ -676,12 +673,9 @@ function getNetPay(driverID, actualHours, requiredHours, rateFile) {
         
         // Calculate deduction rate
         const deductionRatePerHour = Math.floor(driverBasePay / 185);
-        
-        // Calculate deduction
-        const deduction = billableHours * deductionRatePerHour;
-        
+    
         // Calculate net pay
-        const netPay = driverBasePay - deduction;
+        const netPay = driverBasePay - (billableHours * deductionRatePerHour);
         
         return netPay;
         
