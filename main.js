@@ -429,13 +429,61 @@ function countBonusPerMonth(textFile, driverID, month) {
 
 // ============================================================
 // Function 8: getTotalActiveHoursPerMonth(textFile, driverID, month)
+// Sums active hours for a driver in a specific month
 // textFile: (typeof string) path to shifts text file
 // driverID: (typeof string)
 // month: (typeof number)
 // Returns: string formatted as hhh:mm:ss
 // ============================================================
 function getTotalActiveHoursPerMonth(textFile, driverID, month) {
-    // TODO: Implement this function
+    // Edge cases:
+    // - No records for that driver/month (return "000:00:00")
+    
+    try {
+        // Read the file
+        let content = fs.readFileSync(textFile, 'utf8');
+        const lines = content.trim().split('\n');
+        
+        if (lines.length <= 1) {
+            return "000:00:00";
+        }
+        
+        // Get headers
+        const headers = lines[0].split(',');
+        
+        // Find activeTime column index
+        const activeTimeIndex = headers.findIndex(h => h === 'activeTime');
+        
+        // Format month for comparison
+        const monthStr = month.toString().padStart(2, '0');
+        
+        let totalSeconds = 0;
+        
+        for (let i = 1; i < lines.length; i++) {
+            if (lines[i].trim() === '') continue;
+            
+            const values = lines[i].split(',');
+            
+            // Check if this is the driver we want
+            if (values[0].trim() === driverID) {
+                // Extract month from date
+                const recordMonth = values[2].substring(5, 7); // date is at index 2
+                
+                if (recordMonth === monthStr) {
+                    // Add activeTime to total
+                    const activeTime = values[activeTimeIndex].trim();
+                    totalSeconds += durationToSeconds(activeTime);
+                }
+            }
+        }
+        
+        // Return in hhh:mm:ss format
+        return secondsToTime(totalSeconds, true);
+        
+    } catch (error) {
+        console.error("Error in getTotalActiveHoursPerMonth:", error);
+        return "000:00:00";
+    }
 }
 
 // ============================================================
