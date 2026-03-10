@@ -552,24 +552,34 @@ function getTotalActiveHoursPerMonth(textFile, driverID, month) {
     // - No shift records for the month
 function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, month) {
     try {
-        // First, read rateFile to get driver's day off
-        const rateContent = fs.readFileSync(rateFile, 'utf8');
-        const rateLines = rateContent.trim().split('\n');
-        
-        if (rateLines.length <= 1) {
+        // First, read rateFile
+        let rateContent;
+        try {
+            rateContent = fs.readFileSync(rateFile, 'utf8');
+        } catch (e) {
             return "000:00:00";
         }
         
+        const rateLines = rateContent.split('\n').filter(line => line.trim() !== '');
+        if (rateLines.length <= 1) return "000:00:00";
+        
         const rateHeaders = rateLines[0].split(',');
-        let driverDayOff = null;
+        const rateDriverIDIndex = rateHeaders.findIndex(h => h.trim() === 'driverID');
+        const dayOffIndex = rateHeaders.findIndex(h => h.trim() === 'dayOff');
+        
+        if (rateDriverIDIndex === -1 || dayOffIndex === -1) return "000:00:00";
         
         // Find driver in rate file
+        let driverDayOff = null;
+        
         for (let i = 1; i < rateLines.length; i++) {
             if (!rateLines[i] || rateLines[i].trim() === '') continue;
             
             const values = rateLines[i].split(',');
-            if (values[0].trim() === driverID) {
-                driverDayOff = values[1].trim(); // dayOff is at index 1
+            if (values.length <= Math.max(rateDriverIDIndex, dayOffIndex)) continue;
+            
+            if (values[rateDriverIDIndex].trim() === driverID) {
+                driverDayOff = values[dayOffIndex].trim();
                 break;
             }
         }
@@ -578,47 +588,53 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
             return "000:00:00";
         }
         
-        // Now read shifts file to get all dates for this driver/month
-        const shiftContent = fs.readFileSync(textFile, 'utf8');
-        const shiftLines = shiftContent.trim().split('\n');
-        
-        if (shiftLines.length <= 1) {
+        // Now read shifts file
+        let shiftContent;
+        try {
+            shiftContent = fs.readFileSync(textFile, 'utf8');
+        } catch (e) {
             return "000:00:00";
         }
         
-        const shiftHeaders = shiftLines[0].split(',');
+        const shiftLines = shiftContent.split('\n').filter(line => line.trim() !== '');
+        if (shiftLines.length <= 1) return "000:00:00";
         
-        // Format month for comparison
+        const shiftHeaders = shiftLines[0].split(',');
+        const shiftDriverIDIndex = shiftHeaders.findIndex(h => h.trim() === 'driverID');
+        const dateIndex = shiftHeaders.findIndex(h => h.trim() === 'date');
+        
+        if (shiftDriverIDIndex === -1 || dateIndex === -1) return "000:00:00";
+        
+        // Format month
         const monthStr = month.toString().padStart(2, '0');
         
-        // Get all unique dates for this driver/month
-        const dates = [];
+        // Day names mapping
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        
+        // Collect unique dates
+        const uniqueDates = new Set();
         
         for (let i = 1; i < shiftLines.length; i++) {
             if (!shiftLines[i] || shiftLines[i].trim() === '') continue;
             
             const values = shiftLines[i].split(',');
-            if (values[0].trim() === driverID) {
-                const recordDate = values[2].trim(); // date at index 2
-                const recordMonth = recordDate.substring(5, 7);
-                
-                if (recordMonth === monthStr) {
-                    dates.push(recordDate);
+            if (values.length <= Math.max(shiftDriverIDIndex, dateIndex)) continue;
+            
+            if (values[shiftDriverIDIndex].trim() === driverID) {
+                const dateStr = values[dateIndex].trim();
+                if (dateStr && dateStr.length >= 7) {
+                    const recordMonth = dateStr.substring(5, 7);
+                    if (recordMonth === monthStr) {
+                        uniqueDates.add(dateStr);
+                    }
                 }
             }
         }
         
-        // Remove duplicates
-        const uniqueDates = [...new Set(dates)];
-        
-        // Calculate required hours for each date
+        // Calculate required hours
         let totalRequiredSeconds = 0;
         
-        // Day names mapping
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        
         for (const dateStr of uniqueDates) {
-            // Check if this date is the driver's day off
             const dateObj = new Date(dateStr);
             const dayName = dayNames[dateObj.getDay()];
             
@@ -626,23 +642,20 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
                 continue;
             }
             
-            // Check if date is in Eid period
             const eidStart = new Date('2025-04-10');
             const eidEnd = new Date('2025-04-30');
             const isEid = dateObj >= eidStart && dateObj <= eidEnd;
-
+            
             if (isEid) {
                 totalRequiredSeconds += 6 * 3600;
             } else {
                 totalRequiredSeconds += (8 * 3600) + (24 * 60);
             }
         }
-
-        // Subtract bonus hours (2 hours per bonus)
+        
         totalRequiredSeconds -= (bonusCount * 2 * 3600);
-
         totalRequiredSeconds = Math.max(0, totalRequiredSeconds);
-
+        
         return secondsToTime(totalRequiredSeconds, true);
         
     } catch (error) {
