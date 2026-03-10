@@ -218,12 +218,99 @@ function metQuota(date, activeTime) {
 
 // ============================================================
 // Function 5: addShiftRecord(textFile, shiftObj)
+// Adds a new shift record to the file with all calculated fields
 // textFile: (typeof string) path to shifts text file
 // shiftObj: (typeof object) has driverID, driverName, date, startTime, endTime
 // Returns: object with 10 properties or empty object {}
 // ============================================================
 function addShiftRecord(textFile, shiftObj) {
-    // TODO: Implement this function
+    // Edge cases:
+    // - Empty file
+    // - Duplicate driverID + date
+    // - First record for a driver
+    // - File doesn't exist (should exist in assignment)
+    
+    try {
+        // Read the file
+        let content = fs.readFileSync(textFile, 'utf8');
+        const lines = content.trim().split('\n');
+        
+        // Handle empty file (just headers)
+        if (lines.length === 0) {
+            return {};
+        }
+        
+        // Get headers from first line
+        const headers = lines[0].split(',');
+        
+        // Check for duplicate (same driverID and date)
+        let duplicateFound = false;
+        let lastIndexForDriver = -1;
+        
+        for (let i = 1; i < lines.length; i++) {
+            if (lines[i].trim() === '') continue;
+            
+            const record = parseCSVLine(lines[i], headers);
+            
+            // Track last occurrence of this driver
+            if (record.driverID === shiftObj.driverID) {
+                lastIndexForDriver = i;
+                
+                // Check if same date (duplicate)
+                if (record.date === shiftObj.date) {
+                    duplicateFound = true;
+                }
+            }
+        }
+        
+        // If duplicate found, return empty object
+        if (duplicateFound) {
+            return {};
+        }
+        
+        // Calculate all required fields
+        const shiftDuration = getShiftDuration(shiftObj.startTime, shiftObj.endTime);
+        const idleTime = getIdleTime(shiftObj.startTime, shiftObj.endTime);
+        const activeTime = getActiveTime(shiftDuration, idleTime);
+        const metQuotaValue = metQuota(shiftObj.date, activeTime);
+        
+        // Create complete record with all 10 properties
+        const newRecord = {
+            driverID: shiftObj.driverID,
+            driverName: shiftObj.driverName,
+            date: shiftObj.date,
+            startTime: shiftObj.startTime,
+            endTime: shiftObj.endTime,
+            shiftDuration: shiftDuration,
+            idleTime: idleTime,
+            activeTime: activeTime,
+            metQuota: metQuotaValue,
+            hasBonus: false
+        };
+        
+        // Convert new record to CSV line
+        const newLine = objectToCSVLine(newRecord, headers);
+        
+        // Insert at appropriate position
+        if (lastIndexForDriver === -1) {
+            // New driver - append to end
+            lines.push(newLine);
+        } else {
+            // Existing driver - insert after last occurrence
+            lines.splice(lastIndexForDriver + 1, 0, newLine);
+        }
+        
+        // Write back to file
+        const updatedContent = lines.join('\n');
+        fs.writeFileSync(textFile, updatedContent);
+        
+        return newRecord;
+        
+    } catch (error) {
+        // If any error occurs, return empty object
+        console.error("Error in addShiftRecord:", error);
+        return {};
+    }
 }
 
 // ============================================================
