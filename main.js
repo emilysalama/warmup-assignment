@@ -166,12 +166,22 @@ function getIdleTime(startTime, endTime) {
 
 // ============================================================
 // Function 3: getActiveTime(shiftDuration, idleTime)
+// Calculates active time = shiftDuration - idleTime
 // shiftDuration: (typeof string) formatted as h:mm:ss
 // idleTime: (typeof string) formatted as h:mm:ss
 // Returns: string formatted as h:mm:ss
 // ============================================================
 function getActiveTime(shiftDuration, idleTime) {
-    // TODO: Implement this function
+     // Edge cases:
+    // - idleTime greater than shiftDuration (shouldn't happen but handle)
+    
+    const shiftSeconds = durationToSeconds(shiftDuration);
+    const idleSeconds = durationToSeconds(idleTime);
+    
+    // Active time cannot be negative
+    const activeSeconds = Math.max(0, shiftSeconds - idleSeconds);
+    
+    return secondsToTime(activeSeconds);
 }
 
 // ============================================================
