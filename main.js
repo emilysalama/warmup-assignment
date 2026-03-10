@@ -327,7 +327,7 @@ function setBonus(textFile, driverID, date, newValue) {
      // Edge cases:
     // - Record not found (do nothing)
     // - Multiple records same driver/date (shouldn't happen)
-    
+
     try {
         // Read the file
         let content = fs.readFileSync(textFile, 'utf8');
@@ -383,15 +383,14 @@ function countBonusPerMonth(textFile, driverID, month) {
     // - Month can be "4" or "04"
     // - Driver not found (return -1)
     // - No records for that month (return 0)
-    
+
     try {
         // Read the file
         let content = fs.readFileSync(textFile, 'utf8');
         const lines = content.trim().split('\n');
         
         if (lines.length <= 1) {
-            // Only headers or empty file
-            return -1; // Driver not found
+            return -1;
         }
         
         // Get headers
@@ -404,7 +403,7 @@ function countBonusPerMonth(textFile, driverID, month) {
         let bonusCount = 0;
         
         for (let i = 1; i < lines.length; i++) {
-            if (lines[i].trim() === '') continue;
+            if (!lines[i] || lines[i].trim() === '') continue;
             
             const record = parseCSVLine(lines[i], headers);
             
