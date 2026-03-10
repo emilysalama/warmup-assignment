@@ -673,44 +673,54 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
 // rateFile: (typeof string) path to driver rates text file
 // Returns: integer (net pay)
 // ============================================================
-function getNetPay(driverID, actualHours, requiredHours, rateFile) {
-    // Edge cases:
+// Edge cases:
     // - Driver not found in rateFile (return 0)
     // - Actual hours >= required hours (no deduction)
-
+function getNetPay(driverID, actualHours, requiredHours, rateFile) {
     try {
-        // Read rateFile to get driver's tier and basePay
-        const rateContent = fs.readFileSync(rateFile, 'utf8');
-        const rateLines = rateContent.trim().split('\n');
-        
-        if (rateLines.length <= 1) {
+        // Read rateFile
+        let rateContent;
+        try {
+            rateContent = fs.readFileSync(rateFile, 'utf8');
+        } catch (e) {
             return 0;
-          }
-    
-        // Find driver in rate file
-        let driverTier = null;
-        let driverBasePay = null;
+        }
+        
+        const rateLines = rateContent.split('\n').filter(line => line.trim() !== '');
+        if (rateLines.length <= 1) return 0;
+        
+        const rateHeaders = rateLines[0].split(',');
+        const driverIDIndex = rateHeaders.findIndex(h => h.trim() === 'driverID');
+        const basePayIndex = rateHeaders.findIndex(h => h.trim() === 'basePay');
+        const tierIndex = rateHeaders.findIndex(h => h.trim() === 'tier');
+        
+        if (driverIDIndex === -1 || basePayIndex === -1 || tierIndex === -1) return 0;
+        
+        // Find driver
+        let driverBasePay = 0;
+        let driverTier = 0;
+        let driverFound = false;
         
         for (let i = 1; i < rateLines.length; i++) {
             if (!rateLines[i] || rateLines[i].trim() === '') continue;
             
             const values = rateLines[i].split(',');
-            if (values[0].trim() === driverID) {
-                driverTier = parseInt(values[3].trim(), 10);
-                driverBasePay = parseInt(values[2].trim(), 10);
+            if (values.length <= Math.max(driverIDIndex, basePayIndex, tierIndex)) continue;
+            
+            if (values[driverIDIndex].trim() === driverID) {
+                driverBasePay = parseInt(values[basePayIndex].trim(), 10);
+                driverTier = parseInt(values[tierIndex].trim(), 10);
+                driverFound = true;
                 break;
             }
         }
         
-        if (!driverTier || !driverBasePay) {
-            return 0;
-        }
+        if (!driverFound) return 0;
         
         // Convert hours to seconds
         const actualSeconds = durationToSeconds(actualHours);
         const requiredSeconds = durationToSeconds(requiredHours);
         
-        // If actual >= required, no deduction
         if (actualSeconds >= requiredSeconds) {
             return driverBasePay;
         }
@@ -719,28 +729,24 @@ function getNetPay(driverID, actualHours, requiredHours, rateFile) {
         let missingSeconds = requiredSeconds - actualSeconds;
         
         // Tier allowances
-        const allowanceHours = {
-            1: 50,
-            2: 20,
-            3: 10,
-            4: 3
+        const allowanceMap = {
+            1: 50 * 3600,
+            2: 20 * 3600,
+            3: 10 * 3600,
+            4: 3 * 3600
         };
         
-        const allowanceSeconds = allowanceHours[driverTier] * 3600;
-        
-        // Calculate billable seconds after allowance
+        const allowanceSeconds = allowanceMap[driverTier] || 0;
         let billableSeconds = Math.max(0, missingSeconds - allowanceSeconds);
         
-        // Convert to full hours only (floor)
+        // Convert to full hours only
         const billableHours = Math.floor(billableSeconds / 3600);
         
-        // Calculate deduction rate
+        // Calculate deduction
         const deductionRatePerHour = Math.floor(driverBasePay / 185);
-    
-        // Calculate net pay
-        const netPay = driverBasePay - (billableHours * deductionRatePerHour);
+        const deduction = billableHours * deductionRatePerHour;
         
-        return netPay;
+        return driverBasePay - deduction;
         
     } catch (error) {
         console.error("Error in getNetPay:", error);
