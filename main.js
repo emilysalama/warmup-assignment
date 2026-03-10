@@ -473,27 +473,35 @@ function countBonusPerMonth(textFile, driverID, month) {
 // driverID: (typeof string)
 // month: (typeof number)
 // Returns: string formatted as hhh:mm:ss
+// Edge cases:
+    // - No records for that driver/month (return "000:00:00")
 // ============================================================
 function getTotalActiveHoursPerMonth(textFile, driverID, month) {
-    // Edge cases:
-    // - No records for that driver/month (return "000:00:00")
-    
+
     try {
         // Read the file
-        let content = fs.readFileSync(textFile, 'utf8');
-        const lines = content.trim().split('\n');
-        
-        if (lines.length <= 1) {
+        let content;
+        try {
+            content = fs.readFileSync(textFile, 'utf8');
+        } catch (e) {
             return "000:00:00";
         }
         
-        // Get headers
+        const lines = content.split('\n').filter(line => line.trim() !== '');
+        if (lines.length <= 1) return "000:00:00";
+        
         const headers = lines[0].split(',');
         
-        // Find activeTime column index
+        // Find column indices
+        const driverIDIndex = headers.findIndex(h => h.trim() === 'driverID');
+        const dateIndex = headers.findIndex(h => h.trim() === 'date');
         const activeTimeIndex = headers.findIndex(h => h.trim() === 'activeTime');
         
-        // Format month for comparison
+        if (driverIDIndex === -1 || dateIndex === -1 || activeTimeIndex === -1) {
+            return "000:00:00";
+        }
+        
+        // Format month
         const monthStr = month.toString().padStart(2, '0');
         
         let totalSeconds = 0;
@@ -502,21 +510,23 @@ function getTotalActiveHoursPerMonth(textFile, driverID, month) {
             if (!lines[i] || lines[i].trim() === '') continue;
             
             const values = lines[i].split(',');
+            if (values.length <= Math.max(driverIDIndex, dateIndex, activeTimeIndex)) continue;
             
-            // Check if this is the driver we want
-            if (values[0].trim() === driverID) {
-                // Extract month from date (date is at index 2)
-                const recordMonth = values[2].substring(5, 7);
-                
-                if (recordMonth === monthStr) {
-                    // Add activeTime to total (activeTime is at activeTimeIndex)
-                    const activeTime = values[activeTimeIndex].trim();
-                    totalSeconds += durationToSeconds(activeTime);
+            const currentDriverID = values[driverIDIndex].trim();
+            
+            if (currentDriverID === driverID) {
+                const dateStr = values[dateIndex].trim();
+                if (dateStr && dateStr.length >= 7) {
+                    const recordMonth = dateStr.substring(5, 7);
+                    
+                    if (recordMonth === monthStr) {
+                        const activeTime = values[activeTimeIndex].trim();
+                        totalSeconds += durationToSeconds(activeTime);
+                    }
                 }
             }
         }
-        
-        // Return in hhh:mm:ss format
+    
         return secondsToTime(totalSeconds, true);
         
     } catch (error) {
@@ -524,6 +534,7 @@ function getTotalActiveHoursPerMonth(textFile, driverID, month) {
         return "000:00:00";
     }
 }
+
 
 
 // ============================================================
