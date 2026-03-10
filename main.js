@@ -123,12 +123,45 @@ function getShiftDuration(startTime, endTime) {
 
 // ============================================================
 // Function 2: getIdleTime(startTime, endTime)
+// Calculates idle time outside delivery hours (8am-10pm)
 // startTime: (typeof string) formatted as hh:mm:ss am or hh:mm:ss pm
 // endTime: (typeof string) formatted as hh:mm:ss am or hh:mm:ss pm
 // Returns: string formatted as h:mm:ss
 // ============================================================
 function getIdleTime(startTime, endTime) {
-    // TODO: Implement this function
+    // Edge cases:
+    // - Shift completely outside delivery hours
+    // - Shift partially overlapping
+    // - Shift entirely within delivery hours
+    
+    // Convert times to seconds since midnight
+    const startSeconds = timeToSeconds(startTime);
+    let endSeconds = timeToSeconds(endTime);
+    
+    // Handle next day if needed
+    if (endSeconds < startSeconds) {
+        endSeconds += 24 * 3600;
+    }
+    
+    // Define delivery hours boundaries
+    const deliveryStart = 8 * 3600; // 8:00:00 am in seconds
+    const deliveryEnd = 22 * 3600;   // 10:00:00 pm in seconds
+    
+    let idleSeconds = 0;
+    
+    // Calculate idle time before delivery hours
+    if (startSeconds < deliveryStart) {
+        const idleBeforeEnd = Math.min(endSeconds, deliveryStart);
+        idleSeconds += (idleBeforeEnd - startSeconds);
+    }
+    
+    // Calculate idle time after delivery hours
+    if (endSeconds > deliveryEnd) {
+        const idleAfterStart = Math.max(startSeconds, deliveryEnd);
+        idleSeconds += (endSeconds - idleAfterStart);
+    }
+    
+    return secondsToTime(idleSeconds);
 }
 
 // ============================================================
