@@ -232,15 +232,24 @@ function addShiftRecord(textFile, shiftObj) {
 
     try {
         // Read the file
-        let content = fs.readFileSync(textFile, 'utf8');
-        const lines = content.trim().split('\n');
-        
-        // Handle empty file or just headers
-        if (lines.length < 1) {
-            return {};
+        let content;
+        try {
+            content = fs.readFileSync(textFile, 'utf8');
+        } catch (e) {
+            // If file doesn't exist, create with headers
+            const headers = 'driverID,driverName,date,startTime,endTime,shiftDuration,idleTime,activeTime,metQuota,hasBonus';
+            fs.writeFileSync(textFile, headers);
+            content = headers;
         }
         
-        // Get headers from first line
+        // Split into lines and clean up
+        let lines = content.split('\n').filter(line => line.trim() !== '');
+        
+        // Ensure headers exist
+        if (lines.length === 0) {
+            lines = ['driverID,driverName,date,startTime,endTime,shiftDuration,idleTime,activeTime,metQuota,hasBonus'];
+        }
+    
         const headers = lines[0].split(',');
         
         // Check for duplicate (same driverID and date)
@@ -251,14 +260,13 @@ function addShiftRecord(textFile, shiftObj) {
             if (!lines[i] || lines[i].trim() === '') continue;
             
             const values = lines[i].split(',');
-            const currentDriverID = values[0].trim();
-            const currentDate = values[2].trim(); // date is at index 2
+            if (values.length < 2) continue;
             
-            // Track last occurrence of this driver
+            const currentDriverID = values[0].trim();
+            const currentDate = values[2] ? values[2].trim() : '';
+        
             if (currentDriverID === shiftObj.driverID) {
-                lastIndexForDriver = i;
-                
-                // Check if same date (duplicate)
+               lastIndexForDriver = i;
                 if (currentDate === shiftObj.date) {
                     duplicateFound = true;
                 }
@@ -276,22 +284,21 @@ function addShiftRecord(textFile, shiftObj) {
         const activeTime = getActiveTime(shiftDuration, idleTime);
         const metQuotaValue = metQuota(shiftObj.date, activeTime);
         
-        // Create complete record with all 10 properties
-        const newRecord = {
-            driverID: shiftObj.driverID,
-            driverName: shiftObj.driverName,
-            date: shiftObj.date,
-            startTime: shiftObj.startTime,
-            endTime: shiftObj.endTime,
-            shiftDuration: shiftDuration,
-            idleTime: idleTime,
-            activeTime: activeTime,
-            metQuota: metQuotaValue,
-            hasBonus: false
-        };
+        // Create complete record
+        const newRecord = [
+            shiftObj.driverID,
+            shiftObj.driverName,
+            shiftObj.date,
+            shiftObj.startTime,
+            shiftObj.endTime,
+            shiftDuration,
+            idleTime,
+            activeTime,
+            metQuotaValue ? 'true' : 'false',
+            'false'
+        ];
         
-        // Convert new record to CSV line
-        const newLine = objectToCSVLine(newRecord, headers);
+        const newLine = newRecord.join(',');
         
         // Insert at appropriate position
         if (lastIndexForDriver === -1) {
@@ -303,11 +310,22 @@ function addShiftRecord(textFile, shiftObj) {
         }
         
         // Write back to file
-        const updatedContent = lines.join('\n');
-        fs.writeFileSync(textFile, updatedContent);
+        fs.writeFileSync(textFile, lines.join('\n'));
         
-        return newRecord;
-        
+        // Return the record as an object
+        return {
+            driverID: shiftObj.driverID,
+            driverName: shiftObj.driverName,
+            date: shiftObj.date,
+            startTime: shiftObj.startTime,
+            endTime: shiftObj.endTime,
+            shiftDuration: shiftDuration,
+            idleTime: idleTime,
+            activeTime: activeTime,
+            metQuota: metQuotaValue,
+            hasBonus: false
+        };
+     
     } catch (error) {
         console.error("Error in addShiftRecord:", error);
         return {};
