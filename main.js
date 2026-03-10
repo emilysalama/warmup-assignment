@@ -4,11 +4,7 @@ const fs = require("fs");
 // HELPER FUNCTIONS (for time conversion)
 // ============================================================
 
-/**
- * Converts time string (hh:mm:ss am/pm) to total seconds since midnight
- * @param {string} timeStr - Time in format "hh:mm:ss am" or "hh:mm:ss pm"
- * @returns {number} Total seconds since midnight
- */
+
 function timeToSeconds(timeStr) {
     // Trim any extra spaces
     timeStr = timeStr.trim();
@@ -34,11 +30,7 @@ function timeToSeconds(timeStr) {
     return (hours * 3600) + (minutes * 60) + seconds;
 }
 
-/**
- * Converts duration string (h:mm:ss or hhh:mm:ss) to total seconds
- * @param {string} durationStr - Time in format "h:mm:ss" or "hhh:mm:ss"
- * @returns {number} Total seconds
- */
+
 function durationToSeconds(durationStr) {
     durationStr = durationStr.trim();
     const parts = durationStr.split(':');
@@ -49,14 +41,9 @@ function durationToSeconds(durationStr) {
     return (hours * 3600) + (minutes * 60) + seconds;
 }
 
-/**
- * Converts seconds to time format h:mm:ss or hhh:mm:ss
- * @param {number} totalSeconds - Total seconds
- * @param {boolean} tripleDigitHours - If true, format as hhh:mm:ss (for totals)
- * @returns {string} Formatted time string
- */
+
 function secondsToTime(totalSeconds, tripleDigitHours = false) {
-    // Handle negative values (shouldn't happen but just in case)
+    // Handle negative values in case
     totalSeconds = Math.max(0, totalSeconds);
     
     const hours = Math.floor(totalSeconds / 3600);
@@ -77,12 +64,7 @@ function secondsToTime(totalSeconds, tripleDigitHours = false) {
     }
 }
 
-/**
- * Parses a CSV line into an object using headers
- * @param {string} line - CSV line
- * @param {string[]} headers - Column headers
- * @returns {Object} Parsed object
- */
+
 function parseCSVLine(line, headers) {
     const values = line.split(',');
     const obj = {};
@@ -98,12 +80,7 @@ function parseCSVLine(line, headers) {
     return obj;
 }
 
-/**
- * Converts object to CSV line
- * @param {Object} obj - Object to convert
- * @param {string[]} headers - Column headers in order
- * @returns {string} CSV line
- */
+
 function objectToCSVLine(obj, headers) {
     return headers.map(header => {
         let value = obj[header];
@@ -116,13 +93,33 @@ function objectToCSVLine(obj, headers) {
 }
 // ============================================================
 // Function 1: getShiftDuration(startTime, endTime)
+// Calculates time difference between start and end times
 // startTime: (typeof string) formatted as hh:mm:ss am or hh:mm:ss pm
 // endTime: (typeof string) formatted as hh:mm:ss am or hh:mm:ss pm
 // Returns: string formatted as h:mm:ss
 // ============================================================
 function getShiftDuration(startTime, endTime) {
-    // TODO: Implement this function
+   // Edge cases:
+    // - Handle times that cross noon/midnight
+    // - Handle invalid inputs
+    
+    // Convert both times to seconds since midnight
+    const startSeconds = timeToSeconds(startTime);
+    let endSeconds = timeToSeconds(endTime);
+    
+    // If end time is less than start time, assume it's next day
+    // (e.g., 10:00 pm to 2:00 am next day)
+    if (endSeconds < startSeconds) {
+        endSeconds += 24 * 3600; // Add 24 hours
+    }
+    
+    // Calculate difference
+    const diffSeconds = endSeconds - startSeconds;
+    
+    // Convert back to h:mm:ss format
+    return secondsToTime(diffSeconds);
 }
+
 
 // ============================================================
 // Function 2: getIdleTime(startTime, endTime)
