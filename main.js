@@ -452,7 +452,7 @@ function getTotalActiveHoursPerMonth(textFile, driverID, month) {
         const headers = lines[0].split(',');
         
         // Find activeTime column index
-        const activeTimeIndex = headers.findIndex(h => h === 'activeTime');
+        const activeTimeIndex = headers.findIndex(h => h.trim() === 'activeTime');
         
         // Format month for comparison
         const monthStr = month.toString().padStart(2, '0');
@@ -460,17 +460,17 @@ function getTotalActiveHoursPerMonth(textFile, driverID, month) {
         let totalSeconds = 0;
         
         for (let i = 1; i < lines.length; i++) {
-            if (lines[i].trim() === '') continue;
+            if (!lines[i] || lines[i].trim() === '') continue;
             
             const values = lines[i].split(',');
             
             // Check if this is the driver we want
             if (values[0].trim() === driverID) {
-                // Extract month from date
-                const recordMonth = values[2].substring(5, 7); // date is at index 2
+                // Extract month from date (date is at index 2)
+                const recordMonth = values[2].substring(5, 7);
                 
                 if (recordMonth === monthStr) {
-                    // Add activeTime to total
+                    // Add activeTime to total (activeTime is at activeTimeIndex)
                     const activeTime = values[activeTimeIndex].trim();
                     totalSeconds += durationToSeconds(activeTime);
                 }
@@ -485,6 +485,7 @@ function getTotalActiveHoursPerMonth(textFile, driverID, month) {
         return "000:00:00";
     }
 }
+
 
 // ============================================================
 // Function 9: getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, month)
