@@ -402,26 +402,34 @@ function setBonus(textFile, driverID, date, newValue) {
 // driverID: (typeof string)
 // month: (typeof string) formatted as mm or m
 // Returns: number (-1 if driverID not found)
-// ============================================================
-function countBonusPerMonth(textFile, driverID, month) {
-    // Edge cases:
+// Edge cases:
     // - Month can be "4" or "04"
     // - Driver not found (return -1)
     // - No records for that month (return 0)
-
+// ============================================================
+function countBonusPerMonth(textFile, driverID, month) {
     try {
         // Read the file
-        let content = fs.readFileSync(textFile, 'utf8');
-        const lines = content.trim().split('\n');
-        
-        if (lines.length <= 1) {
+        let content;
+        try {
+            content = fs.readFileSync(textFile, 'utf8');
+        } catch (e) {
             return -1;
         }
         
-        // Get headers
+        const lines = content.split('\n').filter(line => line.trim() !== '');
+        if (lines.length <= 1) return -1;
+        
         const headers = lines[0].split(',');
         
-        // Normalize month input (pad with leading zero if needed)
+        // Find column indices
+        const driverIDIndex = headers.findIndex(h => h.trim() === 'driverID');
+        const dateIndex = headers.findIndex(h => h.trim() === 'date');
+        const bonusIndex = headers.findIndex(h => h.trim() === 'hasBonus');
+        
+        if (driverIDIndex === -1 || dateIndex === -1 || bonusIndex === -1) return -1;
+        
+        // Normalize month
         const monthStr = month.toString().padStart(2, '0');
         
         let driverFound = false;
@@ -430,16 +438,22 @@ function countBonusPerMonth(textFile, driverID, month) {
         for (let i = 1; i < lines.length; i++) {
             if (!lines[i] || lines[i].trim() === '') continue;
             
-            const record = parseCSVLine(lines[i], headers);
+            const values = lines[i].split(',');
+            if (values.length <= Math.max(driverIDIndex, dateIndex, bonusIndex)) continue;
             
-            if (record.driverID === driverID) {
+            const currentDriverID = values[driverIDIndex].trim();
+            
+            if (currentDriverID === driverID) {
                 driverFound = true;
                 
-                // Extract month from date (yyyy-mm-dd)
-                const recordMonth = record.date.substring(5, 7);
-                
-                if (recordMonth === monthStr && record.hasBonus === true) {
-                    bonusCount++;
+                const dateStr = values[dateIndex].trim();
+                if (dateStr && dateStr.length >= 7) {
+                    const recordMonth = dateStr.substring(5, 7);
+                    const bonusValue = values[bonusIndex].trim().toLowerCase();
+                    
+                    if (recordMonth === monthStr && (bonusValue === 'true' || bonusValue === '1')) {
+                        bonusCount++;
+                    }
                 }
             }
         }
