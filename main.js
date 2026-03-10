@@ -315,6 +315,7 @@ function addShiftRecord(textFile, shiftObj) {
 
 // ============================================================
 // Function 6: setBonus(textFile, driverID, date, newValue)
+// Updates the hasBonus field for a specific record
 // textFile: (typeof string) path to shifts text file
 // driverID: (typeof string)
 // date: (typeof string) formatted as yyyy-mm-dd
@@ -322,7 +323,50 @@ function addShiftRecord(textFile, shiftObj) {
 // Returns: nothing (void)
 // ============================================================
 function setBonus(textFile, driverID, date, newValue) {
-    // TODO: Implement this function
+   // Edge cases:
+    // - Record not found (do nothing)
+    // - Multiple records same driver/date (shouldn't happen)
+    
+    try {
+        // Read the file
+        let content = fs.readFileSync(textFile, 'utf8');
+        const lines = content.trim().split('\n');
+        
+        if (lines.length === 0) return;
+        
+        // Get headers
+        const headers = lines[0].split(',');
+        
+        // Find the bonus column index
+        const bonusIndex = headers.findIndex(h => h === 'hasBonus');
+        
+        // Find and update the matching record
+        let updated = false;
+        
+        for (let i = 1; i < lines.length; i++) {
+            if (lines[i].trim() === '') continue;
+            
+            const values = lines[i].split(',');
+            
+            // Check if this is the record we want
+            if (values[0].trim() === driverID && values[2].trim() === date) {
+                // Update the bonus value
+                values[bonusIndex] = newValue.toString();
+                lines[i] = values.join(',');
+                updated = true;
+                break; // Found and updated, no need to continue
+            }
+        }
+        
+        // If updated, write back to file
+        if (updated) {
+            const updatedContent = lines.join('\n');
+            fs.writeFileSync(textFile, updatedContent);
+        }
+        
+    } catch (error) {
+        console.error("Error in setBonus:", error);
+    }
 }
 
 // ============================================================
