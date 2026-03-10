@@ -340,24 +340,29 @@ function addShiftRecord(textFile, shiftObj) {
 // date: (typeof string) formatted as yyyy-mm-dd
 // newValue: (typeof boolean)
 // Returns: nothing (void)
-// ============================================================
-function setBonus(textFile, driverID, date, newValue) {
-     // Edge cases:
+ // Edge cases:
     // - Record not found (do nothing)
     // - Multiple records same driver/date (shouldn't happen)
+// ============================================================
 
+function setBonus(textFile, driverID, date, newValue) {
     try {
         // Read the file
-        let content = fs.readFileSync(textFile, 'utf8');
-        const lines = content.trim().split('\n');
+        let content;
+        try {
+            content = fs.readFileSync(textFile, 'utf8');
+        } catch (e) {
+            return; // File doesn't exist
+        }
         
-        if (lines.length < 1) return;
-        
-        // Get headers
+        const lines = content.split('\n').filter(line => line.trim() !== '');
+        if (lines.length <= 1) return;
+     
         const headers = lines[0].split(',');
         
-        // Find the bonus column index
+        // Find the hasBonus column index
         const bonusIndex = headers.findIndex(h => h.trim() === 'hasBonus');
+        if (bonusIndex === -1) return;
         
         // Find and update the matching record
         let updated = false;
@@ -366,10 +371,12 @@ function setBonus(textFile, driverID, date, newValue) {
             if (!lines[i] || lines[i].trim() === '') continue;
             
             const values = lines[i].split(',');
+            if (values.length < 3) continue;
             
-            // Check if this is the record we want (driverID at index 0, date at index 2)
-            if (values[0].trim() === driverID && values[2].trim() === date) {
-                // Update the bonus value
+            const currentDriverID = values[0].trim();
+            const currentDate = values[2] ? values[2].trim() : '';
+            
+            if (currentDriverID === driverID && currentDate === date) {
                 values[bonusIndex] = newValue ? 'true' : 'false';
                 lines[i] = values.join(',');
                 updated = true;
@@ -379,14 +386,14 @@ function setBonus(textFile, driverID, date, newValue) {
         
         // If updated, write back to file
         if (updated) {
-            const updatedContent = lines.join('\n');
-            fs.writeFileSync(textFile, updatedContent);
+            fs.writeFileSync(textFile, lines.join('\n'));
         }
         
     } catch (error) {
         console.error("Error in setBonus:", error);
     }
 }
+
 
 // ============================================================
 // Function 7: countBonusPerMonth(textFile, driverID, month)
