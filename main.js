@@ -497,11 +497,10 @@ function getTotalActiveHoursPerMonth(textFile, driverID, month) {
 // month: (typeof number)
 // Returns: string formatted as hhh:mm:ss
 // ============================================================
-function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, month) {
-    // Edge cases:
+         // Edge cases:
     // - Driver not found in rateFile (return "000:00:00")
     // - No shift records for the month
-    
+function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, month) {
     try {
         // First, read rateFile to get driver's day off
         const rateContent = fs.readFileSync(rateFile, 'utf8');
@@ -516,7 +515,7 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
         
         // Find driver in rate file
         for (let i = 1; i < rateLines.length; i++) {
-            if (rateLines[i].trim() === '') continue;
+            if (!rateLines[i] || rateLines[i].trim() === '') continue;
             
             const values = rateLines[i].split(',');
             if (values[0].trim() === driverID) {
@@ -526,7 +525,7 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
         }
         
         if (!driverDayOff) {
-            return "000:00:00"; // Driver not found in rates
+            return "000:00:00";
         }
         
         // Now read shifts file to get all dates for this driver/month
@@ -546,7 +545,7 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
         const dates = [];
         
         for (let i = 1; i < shiftLines.length; i++) {
-            if (shiftLines[i].trim() === '') continue;
+            if (!shiftLines[i] || shiftLines[i].trim() === '') continue;
             
             const values = shiftLines[i].split(',');
             if (values[0].trim() === driverID) {
@@ -559,13 +558,13 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
             }
         }
         
-        // Remove duplicates (in case multiple shifts same day? shouldn't happen per spec)
+        // Remove duplicates
         const uniqueDates = [...new Set(dates)];
         
         // Calculate required hours for each date
         let totalRequiredSeconds = 0;
         
-        // Day names mapping for day off check
+        // Day names mapping
         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         
         for (const dateStr of uniqueDates) {
@@ -574,26 +573,26 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
             const dayName = dayNames[dateObj.getDay()];
             
             if (dayName === driverDayOff) {
-                continue; // Skip day off
+                continue;
             }
             
             // Check if date is in Eid period
-            const isEid = dateObj >= new Date('2025-04-10') && dateObj <= new Date('2025-04-30');
-            
-            // Add quota seconds
+            const eidStart = new Date('2025-04-10');
+            const eidEnd = new Date('2025-04-30');
+            const isEid = dateObj >= eidStart && dateObj <= eidEnd;
+                      
             if (isEid) {
-                totalRequiredSeconds += 6 * 3600; // 6 hours
+                totalRequiredSeconds += 6 * 3600;
             } else {
-                totalRequiredSeconds += (8 * 3600) + (24 * 60); // 8 hours 24 minutes
+                totalRequiredSeconds += (8 * 3600) + (24 * 60);
             }
         }
-        
+
         // Subtract bonus hours (2 hours per bonus)
         totalRequiredSeconds -= (bonusCount * 2 * 3600);
-        
-        // Ensure not negative
+
         totalRequiredSeconds = Math.max(0, totalRequiredSeconds);
-        
+
         return secondsToTime(totalRequiredSeconds, true);
         
     } catch (error) {
@@ -601,7 +600,8 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
         return "000:00:00";
     }
 }
-
+    
+    
 // ============================================================
 // Function 10: getNetPay(driverID, actualHours, requiredHours, rateFile)
 // Calculates net pay after deductions for missing hours
