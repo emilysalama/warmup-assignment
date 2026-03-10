@@ -235,8 +235,8 @@ function addShiftRecord(textFile, shiftObj) {
         let content = fs.readFileSync(textFile, 'utf8');
         const lines = content.trim().split('\n');
         
-        // Handle empty file (just headers)
-        if (lines.length === 0) {
+        // Handle empty file or just headers
+        if (lines.length < 1) {
             return {};
         }
         
@@ -248,16 +248,18 @@ function addShiftRecord(textFile, shiftObj) {
         let lastIndexForDriver = -1;
         
         for (let i = 1; i < lines.length; i++) {
-            if (lines[i].trim() === '') continue;
+            if (!lines[i] || lines[i].trim() === '') continue;
             
-            const record = parseCSVLine(lines[i], headers);
+            const values = lines[i].split(',');
+            const currentDriverID = values[0].trim();
+            const currentDate = values[2].trim(); // date is at index 2
             
             // Track last occurrence of this driver
-            if (record.driverID === shiftObj.driverID) {
+            if (currentDriverID === shiftObj.driverID) {
                 lastIndexForDriver = i;
                 
                 // Check if same date (duplicate)
-                if (record.date === shiftObj.date) {
+                if (currentDate === shiftObj.date) {
                     duplicateFound = true;
                 }
             }
@@ -307,7 +309,6 @@ function addShiftRecord(textFile, shiftObj) {
         return newRecord;
         
     } catch (error) {
-        // If any error occurs, return empty object
         console.error("Error in addShiftRecord:", error);
         return {};
     }
