@@ -229,7 +229,7 @@ function addShiftRecord(textFile, shiftObj) {
     // - Duplicate driverID + date
     // - First record for a driver
     // - File doesn't exist (should exist in assignment)
-    
+
     try {
         // Read the file
         let content = fs.readFileSync(textFile, 'utf8');
@@ -324,7 +324,7 @@ function addShiftRecord(textFile, shiftObj) {
 // Returns: nothing (void)
 // ============================================================
 function setBonus(textFile, driverID, date, newValue) {
-   // Edge cases:
+     // Edge cases:
     // - Record not found (do nothing)
     // - Multiple records same driver/date (shouldn't happen)
     
@@ -333,29 +333,29 @@ function setBonus(textFile, driverID, date, newValue) {
         let content = fs.readFileSync(textFile, 'utf8');
         const lines = content.trim().split('\n');
         
-        if (lines.length === 0) return;
+        if (lines.length < 1) return;
         
         // Get headers
         const headers = lines[0].split(',');
         
         // Find the bonus column index
-        const bonusIndex = headers.findIndex(h => h === 'hasBonus');
+        const bonusIndex = headers.findIndex(h => h.trim() === 'hasBonus');
         
         // Find and update the matching record
         let updated = false;
         
         for (let i = 1; i < lines.length; i++) {
-            if (lines[i].trim() === '') continue;
+            if (!lines[i] || lines[i].trim() === '') continue;
             
             const values = lines[i].split(',');
             
-            // Check if this is the record we want
+            // Check if this is the record we want (driverID at index 0, date at index 2)
             if (values[0].trim() === driverID && values[2].trim() === date) {
                 // Update the bonus value
-                values[bonusIndex] = newValue.toString();
+                values[bonusIndex] = newValue ? 'true' : 'false';
                 lines[i] = values.join(',');
                 updated = true;
-                break; // Found and updated, no need to continue
+                break;
             }
         }
         
