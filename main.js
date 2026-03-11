@@ -498,6 +498,7 @@ function getTotalActiveHoursPerMonth(textFile, driverID, month) {
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i].trim();
             if (!line) continue;
+            
 
             const values = line.split(',');
             if (values.length < 8) continue;
@@ -516,7 +517,8 @@ function getTotalActiveHoursPerMonth(textFile, driverID, month) {
             }
         }
 
-        // ✅ FIX: plain secondsToTime, no triple-digit padding
+        //FIX: plain secondsToTime, no triple-digit padding
+        if (totalSeconds === 0) return "000:00:00";
         return secondsToTime(totalSeconds);
 
     } catch (error) {
