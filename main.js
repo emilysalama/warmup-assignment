@@ -476,10 +476,7 @@ function countBonusPerMonth(textFile, driverID, month) {
 // Edge cases:
     // - No records for that driver/month (return "000:00:00")
 // ============================================================
-// ============================================================
-// FIXED: getTotalActiveHoursPerMonth
-// Remove tripleDigitHours=true — expected format is "33:30:00" not "033:30:00"
-// ============================================================
+
 function getTotalActiveHoursPerMonth(textFile, driverID, month) {
     try {
         let content;
@@ -542,16 +539,7 @@ function getTotalActiveHoursPerMonth(textFile, driverID, month) {
          // Edge cases:
     // - Driver not found in rateFile (return "000:00:00")
     // - No shift records for the month
-// ============================================================
-// FIXED: getRequiredHoursPerMonth
-// - Parse rateFile by header names (handles extra columns like driverName)
-// - Return plain h:mm:ss not hhh:mm:ss
-// ============================================================
-// ============================================================
-// FIXED: getRequiredHoursPerMonth
-// - Parse rateFile by header names (handles extra columns like driverName)
-// - Return plain h:mm:ss not hhh:mm:ss
-// ============================================================
+    
 function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, month) {
     try {
         let rateContent;
@@ -630,8 +618,8 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
         totalRequiredSeconds -= bonusCount * 2 * 3600;
         totalRequiredSeconds = Math.max(0, totalRequiredSeconds);
 
-        // FIX: plain secondsToTime, no triple-digit padding
-        return secondsToTime(totalRequiredSeconds);
+        return totalRequiredSeconds === 0 ? "000:00:00" : secondsToTime(totalRequiredSeconds);
+
 
     } catch (error) {
         console.error("Error in getRequiredHoursPerMonth:", error);
@@ -650,8 +638,7 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
 // ============================================================
 // Edge cases:
     // - Driver not found in rateFile (return 0)
-// ============================================================
-// FIXED: getNetPay
+    
 // - Parse rateFile by header names (handles extra columns)
 // ============================================================
 function getNetPay(driverID, actualHours, requiredHours, rateFile) {
